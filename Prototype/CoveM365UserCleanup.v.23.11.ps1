@@ -54,11 +54,11 @@
 
         [Parameter(Mandatory=$False)] [switch]$ExportSharedBillable = $true,      ## Export Billable Shared Mailboxes with Onedrive History
         [Parameter(Mandatory=$False)] [switch]$CleanupSharedBillable = $true,             ## Prompt to Cleanup Billable Shared Mailboxes with Onedrive History
-        [Parameter(Mandatory=$False)] [int]$OneDriveAge = 45,                     ## Ignore Billable Shared Mailboxes with OneDrive Backups in the last X Days 
+        [Parameter(Mandatory=$False)] [int]$OneDriveAge = 90,                     ## Ignore Billable Shared Mailboxes with OneDrive Backups in the last X Days 
 
         [Parameter(Mandatory=$False)] [switch]$ExportDeleted = $true,             ## Export Deleted Mailboxes
         [Parameter(Mandatory=$False)] [switch]$CleanupDeleted = $true,                    ## Prompt to Cleanup Deleted Mailboxes
-        [Parameter(Mandatory=$False)] [int]$DeletedAge = 45,                      ## Ignore Deleted Mailboxes in the last X Days
+        [Parameter(Mandatory=$False)] [int]$DeletedAge = 90,                      ## Ignore Deleted Mailboxes in the last X Days
 
         [Parameter(Mandatory=$False)] [string]$ExportPath = "$PSScriptRoot",                                ## Export Path
         [Parameter(Mandatory=$False)] [string]$delimiter = ",",                                             ## Delimiter
@@ -783,14 +783,14 @@ Function ExitRoutine {
         $SharedBillable = Import-Csv $Script:csvoutputfile2b
         $filterdate1 = (Get-Date).AddDays(-$OneDriveAge)
         $Script:csvoutputfile2bs = "$ExportPath\$($CurrentDate)_M365_User_Export_Shared_Billable_$($Partnername -replace(`" \(.*\)`",`"`") -replace(`"[^a-zA-Z_0-9]`",`"`"))_$($PartnerId).csv"
-        $SharedBillable | Where-Object {($_.shared -eq "Shared") -and ($_.Protected_Billable -eq "Billable") -and ([datetime]$_.OneDriveLastBackupTimestamp -lt $filterdate1)} | Export-Csv -Path $csvoutputfile2bs -NoTypeInformation
+        $SharedBillable | Where-Object {($_.shared -eq "Shared") -and ($_.Protected_Billable -eq "Billable") -and ([datetime]$_.OneDriveLastBackupTimestamp -lt $filterdate1) -and ([datetime]$_.OneDriveLastBackupTimestamp -gt $(Get-Date "1900/01/01"))} | Export-Csv -Path $csvoutputfile2bs -NoTypeInformation
 
         Write-output $Script:strLineSeparator
         Write-Output "  CSV Path = $Script:csvoutputfile2bs"
         Write-output $Script:strLineSeparator
 
         if ($CleanupSharedBillable) {
-            $Script:OneDriveToClean = $SharedBillable | Where-Object {($_.shared -eq "Shared") -and ($_.Protected_Billable -eq "Billable") -and ([datetime]$_.OneDriveLastBackupTimestamp -lt $filterdate1)} | Out-GridView -Title "Billable Shared Mailboxes Due to Historic OneDrive Retention > $OneDriveAge days | Select Accounts to Purge OneDrive Backup History" -OutputMode Multiple
+            $Script:OneDriveToClean = $SharedBillable | Where-Object {($_.shared -eq "Shared") -and ($_.Protected_Billable -eq "Billable") -and ([datetime]$_.OneDriveLastBackupTimestamp -lt $filterdate1) -and ([datetime]$_.OneDriveLastBackupTimestamp -gt $(Get-Date "1900/01/01"))} | Out-GridView -Title "Billable Shared Mailboxes Due to Historic OneDrive Retention > $OneDriveAge days | Select Accounts to Purge OneDrive Backup History" -OutputMode Multiple
 
             foreach ($item in $OneDriveToClean) {
                 Write-output "Attempting OneDrive removal for Shared Mailbox $($item.accounttoken) $($item.UserGuid) $($item.emailAddress)"
@@ -803,7 +803,7 @@ Function ExitRoutine {
         $Deleted = Import-Csv $Script:csvoutputfile2b
         $filterdate2 = (Get-Date).AddDays(-$DeletedAge)
         $Script:csvoutputfile2bd = "$ExportPath\$($CurrentDate)_M365_User_Export_Deleted_Shared_Billable_$($Partnername -replace(`" \(.*\)`",`"`") -replace(`"[^a-zA-Z_0-9]`",`"`"))_$($PartnerId).csv"
-        $Deleted | Where-Object {($_.deleted -eq "Deleted") -and ([datetime]$_.MailBoxLastBackupTimestamp -lt $filterdate2)} | Export-Csv -Path $csvoutputfile2bd -NoTypeInformation
+        $Deleted | Where-Object {($_.deleted -eq "Deleted") -and ([datetime]$_.MailBoxLastBackupTimestamp -lt $filterdate2) -and ([datetime]$_.MailBoxLastBackupTimestamp -gt $(Get-Date "1900/01/01"))} | Export-Csv -Path $csvoutputfile2bd -NoTypeInformation
         
         Write-output $Script:strLineSeparator
         Write-Output "  CSV Path = $Script:csvoutputfile2bd"
@@ -850,4 +850,3 @@ Function ExitRoutine {
     
 
     ExitRoutine
-  
